@@ -171,24 +171,65 @@ pipeline {
                     script {
                         def markerFilter = env.TEST_MARKERS ? "-m '${env.TEST_MARKERS}'" : "-m 'api'"
                         sh """
-                        #!/bin/bash
-                        set -e
-                        # Activate venv if it exists, otherwise use system Python
-                        if [ -d "venv" ]; then
-                            source venv/bin/activate || . venv/bin/activate
-                        else
-                            echo "⚠️ Using system Python (no venv available)"
-                        fi
-                        # Set PYTHONPATH to include current directory so imports work
-                        if [ -z "\$PYTHONPATH" ]; then
-                            export PYTHONPATH="${env.E2E_DIR}"
-                        else
-                            export PYTHONPATH="${env.E2E_DIR}:\$PYTHONPATH"
-                        fi
-                        echo "PYTHONPATH: \$PYTHONPATH"
-                        echo "Running pytest with markers: ${markerFilter}"
-                        # Run pytest - will fail the stage if tests fail
-                        pytest api_tests/ -v ${markerFilter}
+#!/bin/bash
+set -e
+
+# Activate venv if it exists, otherwise use system Python
+if [ -d "venv" ]; then
+    source venv/bin/activate || . venv/bin/activate
+else
+    echo "⚠️ Using system Python (no venv available)"
+fi
+
+# Set PYTHONPATH to include current directory so imports work
+if [ -z "\$PYTHONPATH" ]; then
+    export PYTHONPATH="${env.E2E_DIR}"
+else
+    export PYTHONPATH="${env.E2E_DIR}:\$PYTHONPATH"
+fi
+echo "PYTHONPATH: \$PYTHONPATH"
+echo "Running pytest with markers: ${markerFilter}"
+
+mkdir -p reports
+
+# Run pytest and always generate JSON report + human summary, even on failures
+set +e
+pytest api_tests/ -v ${markerFilter} \\
+    --json-report --json-report-file=reports/api-tests-report.json
+pytest_exit=\$?
+set -e
+
+python - << 'PY'
+import json, os
+
+report_path = os.path.join("reports", "api-tests-report.json")
+summary_out = "test_summary.txt"
+summary = "Test summary not available; see console output."
+
+if os.path.exists(report_path):
+    with open(report_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    s = data.get("summary", {})
+    passed = s.get("passed", 0)
+    failed = s.get("failed", 0)
+    error = s.get("error", 0)
+    skipped = s.get("skipped", 0)
+    xfailed = s.get("xfailed", 0)
+    xpassed = s.get("xpassed", 0)
+    total = passed + failed + error + skipped + xfailed + xpassed
+    summary = (
+        f"{passed} passed, {failed} failed, {error} errors, "
+        f"{skipped} skipped, {xfailed} xfailed, {xpassed} xpassed "
+        f"(total {total})"
+    )
+
+with open(summary_out, "w", encoding="utf-8") as f:
+    f.write(summary)
+
+print("Pytest summary:", summary)
+PY
+
+exit \$pytest_exit
                         """
                     }
                 }
@@ -245,9 +286,21 @@ if [ -z "$SLACK_WEBHOOK" ]; then
   exit 0
 fi
 
-# Keep payload extremely simple to avoid JSON encoding issues
+# Read test summary if available
+summary_file="$WORKSPACE/e2e_tests/test_summary.txt"
+if [ -f "$summary_file" ]; then
+  summary=$(cat "$summary_file")
+else
+  summary="summary not available; see console"
+fi
+
+# Keep payload simple to avoid JSON encoding issues
+text="✅ E2E API tests PASSED for e2e-tests-pipeline: $summary"
+
+payload=$(printf '{"text": "%s"}' "$text")
+
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data '{"text": "✅ E2E API tests PASSED for e2e-tests-pipeline"}' \
+     --data "$payload" \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
@@ -263,8 +316,20 @@ if [ -z "$SLACK_WEBHOOK" ]; then
   exit 0
 fi
 
+# Read test summary if available
+summary_file="$WORKSPACE/e2e_tests/test_summary.txt"
+if [ -f "$summary_file" ]; then
+  summary=$(cat "$summary_file")
+else
+  summary="summary not available; see console"
+fi
+
+text="❌ E2E API tests FAILED for e2e-tests-pipeline: $summary"
+
+payload=$(printf '{"text": "%s"}' "$text")
+
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data '{"text": "❌ E2E API tests FAILED for e2e-tests-pipeline"}' \
+     --data "$payload" \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
