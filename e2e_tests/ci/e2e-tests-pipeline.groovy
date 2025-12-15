@@ -235,9 +235,58 @@ pipeline {
         }
         success {
             echo "✅ E2E API tests completed successfully - all tests passed!"
+            // Optional Slack notification on success (via incoming webhook)
+            // Requires a Jenkins secret text credential with ID 'slack-e2e-webhook-url'
+            withCredentials([string(credentialsId: 'slack-e2e-webhook-url', variable: 'SLACK_WEBHOOK')]) {
+                sh '''#!/bin/bash
+                set -e
+                if [ -z "$SLACK_WEBHOOK" ]; then
+                  echo "SLACK_WEBHOOK not set; skipping Slack notification"
+                  exit 0
+                fi
+                payload=$(cat <<EOF
+                {
+                  "text": "✅ E2E API tests PASSED for job ${JOB_NAME} #${BUILD_NUMBER}",
+                  "attachments": [
+                    {
+                      "color": "good",
+                      "text": "Console: ${BUILD_URL}console\nHTML report (if generated): ${BUILD_URL}artifact/e2e_tests/reports/report.html"
+                    }
+                  ]
+                }
+                EOF
+                )
+                curl -sS -X POST -H 'Content-type: application/json' \
+                     --data "$payload" "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
+                '''
+            }
         }
         failure {
             echo "❌ E2E API tests failed - check console output above for details"
+            // Optional Slack notification on failure (via incoming webhook)
+            withCredentials([string(credentialsId: 'slack-e2e-webhook-url', variable: 'SLACK_WEBHOOK')]) {
+                sh '''#!/bin/bash
+                set -e
+                if [ -z "$SLACK_WEBHOOK" ]; then
+                  echo "SLACK_WEBHOOK not set; skipping Slack notification"
+                  exit 0
+                fi
+                payload=$(cat <<EOF
+                {
+                  "text": "❌ E2E API tests FAILED for job ${JOB_NAME} #${BUILD_NUMBER}",
+                  "attachments": [
+                    {
+                      "color": "danger",
+                      "text": "Console: ${BUILD_URL}console\nHTML report (if generated): ${BUILD_URL}artifact/e2e_tests/reports/report.html"
+                    }
+                  ]
+                }
+                EOF
+                )
+                curl -sS -X POST -H 'Content-type: application/json' \
+                     --data "$payload" "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
+                '''
+            }
         }
         unstable {
             echo "⚠️ E2E API tests completed with warnings"
