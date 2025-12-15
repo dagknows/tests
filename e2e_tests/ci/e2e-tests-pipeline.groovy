@@ -245,13 +245,10 @@ if [ -z "$SLACK_WEBHOOK" ]; then
   exit 0
 fi
 
-msg="✅ E2E API tests PASSED for job ${JOB_NAME} #${BUILD_NUMBER} - ${BUILD_URL}console"
-# Escape double quotes for JSON
-escaped_msg=$(echo "$msg" | sed 's/"/\\"/g')
-payload="{\"text\": \"$escaped_msg\"}"
-
+# Keep payload extremely simple to avoid JSON encoding issues
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data "$payload" "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
+     --data '{"text": "✅ E2E API tests PASSED for e2e-tests-pipeline"}' \
+     "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
         }
@@ -266,12 +263,9 @@ if [ -z "$SLACK_WEBHOOK" ]; then
   exit 0
 fi
 
-msg="❌ E2E API tests FAILED for job ${JOB_NAME} #${BUILD_NUMBER} - ${BUILD_URL}console"
-escaped_msg=$(echo "$msg" | sed 's/"/\\"/g')
-payload="{\"text\": \"$escaped_msg\"}"
-
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data "$payload" "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
+     --data '{"text": "❌ E2E API tests FAILED for e2e-tests-pipeline"}' \
+     "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
         }
