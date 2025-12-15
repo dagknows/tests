@@ -294,62 +294,12 @@ else
   summary="summary not available; see console"
 fi
 
-export TEST_SUMMARY="$summary"
-export STATUS_EMOJI="✅"
-export STATUS_TEXT="PASSED"
-
-# Build rich Slack message payload using Python to avoid JSON escaping issues
-python - << 'PY'
-import json
-import os
-
-summary = os.environ.get("TEST_SUMMARY", "summary not available; see console")
-job = os.environ.get("JOB_NAME", "")
-build = os.environ.get("BUILD_NUMBER", "")
-url = os.environ.get("BUILD_URL", "")
-status_emoji = os.environ.get("STATUS_EMOJI", "✅")
-status_text = os.environ.get("STATUS_TEXT", "PASSED")
-
-title = f"E2E API Tests {status_text} - {job} #{build}".strip()
-
-blocks = [
-    {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"{status_emoji} *{title}*"
-        }
-    },
-    {
-        "type": "section",
-        "fields": [
-            {
-                "type": "mrkdwn",
-                "text": f"*Result:*\n{status_emoji} {status_text}"
-            },
-            {
-                "type": "mrkdwn",
-                "text": f"*Jenkins Run:*\n<{url}|Open build>"
-            }
-        ]
-    },
-    {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"*Summary:*\n{summary}"
-        }
-    }
-]
-
-payload = {"blocks": blocks}
-
-with open("slack_payload.json", "w", encoding="utf-8") as f:
-    json.dump(payload, f)
-PY
+# Fallback: simple text message only (no python dependency)
+text="✅ E2E API tests PASSED for e2e-tests-pipeline: $summary"
+payload=$(printf '{"text": "%s"}' "$text")
 
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data @slack_payload.json \
+     --data "$payload" \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
@@ -373,61 +323,11 @@ else
   summary="summary not available; see console"
 fi
 
-export TEST_SUMMARY="$summary"
-export STATUS_EMOJI="❌"
-export STATUS_TEXT="FAILED"
-
-python - << 'PY'
-import json
-import os
-
-summary = os.environ.get("TEST_SUMMARY", "summary not available; see console")
-job = os.environ.get("JOB_NAME", "")
-build = os.environ.get("BUILD_NUMBER", "")
-url = os.environ.get("BUILD_URL", "")
-status_emoji = os.environ.get("STATUS_EMOJI", "❌")
-status_text = os.environ.get("STATUS_TEXT", "FAILED")
-
-title = f"E2E API Tests {status_text} - {job} #{build}".strip()
-
-blocks = [
-    {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"{status_emoji} *{title}*"
-        }
-    },
-    {
-        "type": "section",
-        "fields": [
-            {
-                "type": "mrkdwn",
-                "text": f"*Result:*\n{status_emoji} {status_text}"
-            },
-            {
-                "type": "mrkdwn",
-                "text": f"*Jenkins Run:*\n<{url}|Open build>"
-            }
-        ]
-    },
-    {
-        "type": "section",
-        "text": {
-            "type": "mrkdwn",
-            "text": f"*Summary:*\n{summary}"
-        }
-    }
-]
-
-payload = {"blocks": blocks}
-
-with open("slack_payload.json", "w", encoding="utf-8") as f:
-    json.dump(payload, f)
-PY
+text="❌ E2E API tests FAILED for e2e-tests-pipeline: $summary"
+payload=$(printf '{"text": "%s"}' "$text")
 
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data @slack_payload.json \
+     --data "$payload" \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
