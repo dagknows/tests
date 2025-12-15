@@ -294,15 +294,6 @@ else
   summary="summary not available; see console"
 fi
 
-# Determine Jenkins build URL (fallback if BUILD_URL is not set)
-if [ -n "$BUILD_URL" ]; then
-  slack_url="$BUILD_URL"
-elif [ -n "$JENKINS_URL" ]; then
-  slack_url="${JENKINS_URL}job/${JOB_NAME}/${BUILD_NUMBER}/"
-else
-  slack_url=""
-fi
-
 # Build a rich Slack Block Kit payload without requiring python
 cat > slack_payload.json <<EOF
 {
@@ -321,14 +312,9 @@ cat > slack_payload.json <<EOF
           "type": "mrkdwn",
           "text": "*Result:*\\n✅ PASSED"
         },
-        ${
-          [ -n "$slack_url" ] && printf '%s' '{
+        {
           "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n<'"$slack_url"'|Open build>"
-        }' || printf '%s' '{
-          "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n(No build URL available)"
-        }'
+          "text": "*Jenkins Run:*\\n<${BUILD_URL}|Open build>"
         }
       ]
     },
@@ -368,14 +354,6 @@ else
   summary="summary not available; see console"
 fi
 
-if [ -n "$BUILD_URL" ]; then
-  slack_url="$BUILD_URL"
-elif [ -n "$JENKINS_URL" ]; then
-  slack_url="${JENKINS_URL}job/${JOB_NAME}/${BUILD_NUMBER}/"
-else
-  slack_url=""
-fi
-
 cat > slack_payload.json <<EOF
 {
   "blocks": [
@@ -393,14 +371,9 @@ cat > slack_payload.json <<EOF
           "type": "mrkdwn",
           "text": "*Result:*\\n❌ FAILED"
         },
-        ${
-          [ -n "$slack_url" ] && printf '%s' '{
+        {
           "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n<'"$slack_url"'|Open build>"
-        }' || printf '%s' '{
-          "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n(No build URL available)"
-        }'
+          "text": "*Jenkins Run:*\\n<${BUILD_URL}|Open build>"
         }
       ]
     },
