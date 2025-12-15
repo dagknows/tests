@@ -294,12 +294,43 @@ else
   summary="summary not available; see console"
 fi
 
-# Fallback: simple text message only (no python dependency)
-text="✅ E2E API tests PASSED for e2e-tests-pipeline: $summary"
-payload=$(printf '{"text": "%s"}' "$text")
+# Build a rich Slack Block Kit payload without requiring python
+cat > slack_payload.json <<EOF
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "✅ *E2E API Tests PASSED - ${JOB_NAME} #${BUILD_NUMBER}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Result:*\\n✅ PASSED"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Jenkins Run:*\\n<${BUILD_URL}|Open build>"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Summary:*\\n${summary}"
+      }
+    }
+  ]
+}
+EOF
 
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data "$payload" \
+     --data @slack_payload.json \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
@@ -323,11 +354,42 @@ else
   summary="summary not available; see console"
 fi
 
-text="❌ E2E API tests FAILED for e2e-tests-pipeline: $summary"
-payload=$(printf '{"text": "%s"}' "$text")
+cat > slack_payload.json <<EOF
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "❌ *E2E API Tests FAILED - ${JOB_NAME} #${BUILD_NUMBER}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {
+          "type": "mrkdwn",
+          "text": "*Result:*\\n❌ FAILED"
+        },
+        {
+          "type": "mrkdwn",
+          "text": "*Jenkins Run:*\\n<${BUILD_URL}|Open build>"
+        }
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Summary:*\\n${summary}"
+      }
+    }
+  ]
+}
+EOF
 
 curl -sS -X POST -H 'Content-type: application/json' \
-     --data "$payload" \
+     --data @slack_payload.json \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
                 '''
             }
