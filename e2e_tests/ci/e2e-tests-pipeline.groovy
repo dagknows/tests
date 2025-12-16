@@ -273,10 +273,7 @@ exit \$pytest_exit
             // Optional Slack notification on success (via incoming webhook)
             // Requires a Jenkins secret text credential with ID 'slack-e2e-webhook-url'
             withCredentials([string(credentialsId: 'slack-e2e-webhook-url', variable: 'SLACK_WEBHOOK')]) {
-                // Precompute build URL in Groovy so it's always available inside the shell
-                def slackBuildUrl = env.BUILD_URL ?: (env.RUN_DISPLAY_URL ?: "")
-                withEnv(["SLACK_BUILD_URL=${slackBuildUrl}"]) {
-                    sh '''#!/bin/bash
+                sh '''#!/bin/bash
 set -e
 if [ -z "$SLACK_WEBHOOK" ]; then
   echo "SLACK_WEBHOOK not set; skipping Slack notification"
@@ -291,7 +288,7 @@ else
   summary="summary not available; see console"
 fi
 
-# Build a rich Slack Block Kit payload without requiring python
+# Build a simplified Slack Block Kit payload
 cat > slack_payload.json <<EOF
 {
   "blocks": [
@@ -304,19 +301,6 @@ cat > slack_payload.json <<EOF
     },
     {
       "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Result:*\\n✅ PASSED"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n<${SLACK_BUILD_URL}|Open build>"
-        }
-      ]
-    },
-    {
-      "type": "section",
       "text": {
         "type": "mrkdwn",
         "text": "*Summary:*\\n${summary}"
@@ -329,17 +313,14 @@ EOF
 curl -sS -X POST -H 'Content-type: application/json' \
      --data @slack_payload.json \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
-                    '''
-                }
+                '''
             }
         }
         failure {
             echo "❌ E2E API tests failed - check console output above for details"
             // Optional Slack notification on failure (via incoming webhook)
             withCredentials([string(credentialsId: 'slack-e2e-webhook-url', variable: 'SLACK_WEBHOOK')]) {
-                def slackBuildUrl = env.BUILD_URL ?: (env.RUN_DISPLAY_URL ?: "")
-                withEnv(["SLACK_BUILD_URL=${slackBuildUrl}"]) {
-                    sh '''#!/bin/bash
+                sh '''#!/bin/bash
 set -e
 if [ -z "$SLACK_WEBHOOK" ]; then
   echo "SLACK_WEBHOOK not set; skipping Slack notification"
@@ -354,6 +335,7 @@ else
   summary="summary not available; see console"
 fi
 
+# Build a simplified Slack Block Kit payload
 cat > slack_payload.json <<EOF
 {
   "blocks": [
@@ -363,19 +345,6 @@ cat > slack_payload.json <<EOF
         "type": "mrkdwn",
         "text": "❌ *E2E API Tests FAILED - ${JOB_NAME} #${BUILD_NUMBER}*"
       }
-    },
-    {
-      "type": "section",
-      "fields": [
-        {
-          "type": "mrkdwn",
-          "text": "*Result:*\\n❌ FAILED"
-        },
-        {
-          "type": "mrkdwn",
-          "text": "*Jenkins Run:*\\n<${SLACK_BUILD_URL}|Open build>"
-        }
-      ]
     },
     {
       "type": "section",
@@ -391,8 +360,7 @@ EOF
 curl -sS -X POST -H 'Content-type: application/json' \
      --data @slack_payload.json \
      "$SLACK_WEBHOOK" || echo "Slack notification failed (non-fatal)"
-                    '''
-                }
+                '''
             }
         }
         unstable {
