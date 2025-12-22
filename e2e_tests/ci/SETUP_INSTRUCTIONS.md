@@ -100,7 +100,20 @@ If you want to link the Jenkins job to the GitHub repository:
    - **Description:** JWT token for DagKnows API authentication (for yash@dagknows.com)
    - **Note:** This token expires on 2026-06-21. Update when expired.
 
-2. **Git Token (if not already configured):**
+2. **Elasticsearch URL (Optional - for vectorization tests):**
+   - Manage Jenkins → Credentials → Add Credentials
+   - **Type:** Secret text
+   - **ID:** `dagknows-elastic-url`
+   - **Secret:** Full Elasticsearch URL with embedded credentials:
+     ```
+     https://elastic:95EtxQPgPXk4vCMluk4ZZ1jK@my-deployment-05d0c4.es.us-east-2.aws.elastic-cloud.com
+     ```
+   - **Description:** Elasticsearch URL with credentials for vectorization test verification
+   - **Format:** `https://username:password@hostname`
+   - **Note:** This is optional. If not set, vectorization tests will verify via API metadata only (without checking vector dimensions).
+   - **Security:** Credentials are stored securely in Jenkins and masked in logs.
+
+3. **Git Token (if not already configured):**
    - **ID:** `yash-dagknows-github-pat`
    - **Type:** Username with password
    - **Username:** Your GitHub username

@@ -41,6 +41,17 @@ def runE2ETests(Map config) {
             echo "DAGKNOWS_PROXY=?proxy=dev1" >> .env
             echo "DAGKNOWS_TOKEN=\${JWT_TOKEN}" >> .env
             """
+            
+            // Try to add Elasticsearch URL if credential exists (optional)
+            try {
+                withCredentials([string(credentialsId: 'dagknows-elastic-url', variable: 'ELASTIC_URL')]) {
+                    sh """
+                    echo "DAGKNOWS_ELASTIC_URL=\${ELASTIC_URL}" >> .env
+                    """
+                }
+            } catch (Exception e) {
+                echo "Elasticsearch credentials not configured (optional - tests will verify via API metadata only)"
+            }
         }
         
         // Run API tests

@@ -122,8 +122,11 @@ pipeline {
             steps {
                 dir("${env.E2E_DIR}") {
                     script {
-                        // Get JWT token from Jenkins credentials
-                        withCredentials([string(credentialsId: 'dagknows-jwt-token', variable: 'JWT_TOKEN')]) {
+                        // Get JWT token and Elasticsearch credentials from Jenkins credentials
+                        withCredentials([
+                            string(credentialsId: 'dagknows-jwt-token', variable: 'JWT_TOKEN'),
+                            string(credentialsId: 'dagknows-elastic-url', variable: 'ELASTIC_URL')
+                        ]) {
                             script {
                                 // Log token info (first and last 20 chars for verification) without using unsupported methods
                                 def rawToken = JWT_TOKEN
@@ -145,6 +148,15 @@ pipeline {
                                 } else {
                                     echo "⚠️ JWT token from credentials is empty or not set"
                                 }
+                                
+                                // Log Elasticsearch URL info (mask credentials for security)
+                                if (ELASTIC_URL) {
+                                    // Extract hostname for logging (mask credentials)
+                                    def esUrlPreview = ELASTIC_URL.replaceAll('https?://[^@]+@', 'https://***:***@')
+                                    echo "Using Elasticsearch URL from Jenkins credentials (preview: ${esUrlPreview})"
+                                } else {
+                                    echo "⚠️ Elasticsearch URL not set - vectorization tests will verify via API metadata only"
+                                }
                             }
 
                             sh """
@@ -158,6 +170,11 @@ pipeline {
                             echo "TEST_USER_EMAIL=yash+user@dagknows.com" >> .env
                             echo "TEST_USER_PASSWORD=1Hey2Yash*" >> .env
                             echo "TEST_ORG=dagknows" >> .env
+                            
+                            # Set Elasticsearch URL if provided (optional - for vectorization tests)
+                            if [ -n "\${ELASTIC_URL}" ]; then
+                                echo "DAGKNOWS_ELASTIC_URL=\${ELASTIC_URL}" >> .env
+                            fi
                             """
                         }
                     }
