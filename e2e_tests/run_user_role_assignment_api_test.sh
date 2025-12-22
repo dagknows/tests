@@ -1,7 +1,6 @@
 #!/bin/bash
-
-# E2E API Test Runner: Role Management (Create Role and Assign Privileges)
-# This script runs the API-based E2E test for role creation and privilege assignment
+# E2E API Test Runner: User Role Assignment
+# This script runs the API-based E2E test for assigning roles to users
 
 set -e
 
@@ -15,35 +14,32 @@ export PYTHONPATH="${PYTHONPATH}:${SCRIPT_DIR}"
 touch __init__.py config/__init__.py fixtures/__init__.py pages/__init__.py \
       api_tests/__init__.py ui_tests/__init__.py utils/__init__.py 2>/dev/null || true
 
+# Set environment variables (use .env if available, otherwise defaults)
+if [ -f ".env" ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 # Default values
-HEADED=false
-SLOWMO=0
 LOCAL=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --headed)
-            HEADED=true
-            shift
-            ;;
-        --slow)
-            SLOWMO=1000
-            shift
-            ;;
         --local)
             LOCAL=true
             shift
             ;;
         *)
             echo "Unknown option: $1"
-            echo "Usage: $0 [--headed] [--slow] [--local]"
+            echo "Usage: $0 [--local]"
             exit 1
             ;;
     esac
 done
 
-# Set environment variables
+# Set environment variables based on mode
 if [ "$LOCAL" = true ]; then
     export DAGKNOWS_URL="${DAGKNOWS_URL:-http://localhost:3000}"
     export DAGKNOWS_PROXY="${DAGKNOWS_PROXY:-?proxy=yashlocal}"
@@ -57,13 +53,17 @@ else
 fi
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "  Role Management API E2E Test Runner"
+echo "  User Role Assignment API E2E Test Runner"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
+echo "PYTHONPATH: ${PYTHONPATH}"
+echo "Base URL: ${DAGKNOWS_URL}"
+echo ""
 echo "Starting test..."
-echo "Command: pytest api_tests/test_role_management_api.py::TestRoleManagementAPIE2E::test_create_role_and_assign_privileges_via_api -v"
+echo "Command: pytest api_tests/test_user_role_assignment_api.py::TestUserRoleAssignmentAPIE2E::test_assign_role_to_user_for_workspace_via_api -v"
+echo ""
 
-pytest api_tests/test_role_management_api.py::TestRoleManagementAPIE2E::test_create_role_and_assign_privileges_via_api -v
+pytest api_tests/test_user_role_assignment_api.py::TestUserRoleAssignmentAPIE2E::test_assign_role_to_user_for_workspace_via_api -v
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
