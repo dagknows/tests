@@ -6,6 +6,7 @@ Provides high-level API client matching how the frontend calls backend services.
 
 import logging
 import time
+import os
 from typing import Dict, Any, Optional, List
 import requests
 from config.env import config
