@@ -240,7 +240,7 @@ class DagKnowsAPIClient:
         response = self._request("PATCH", f"/api/tasks/{task_id}", json=payload, params=params)
         return response.json()
     
-    def delete_task(self, task_id: str, wsid: Optional[str] = None, recurse: bool = False, forced: bool = False) -> Optional[Dict[str, Any]]:
+    def delete_task(self, task_id: str, wsid: Optional[str] = None, recurse: bool = True, forced: bool = False) -> Optional[Dict[str, Any]]:
         """
         Delete task via API (matches frontend behavior).
         
@@ -255,7 +255,17 @@ class DagKnowsAPIClient:
         Returns:
             Delete response or None
         """
+        # Match frontend behavior:
+        # - Always include a workspace ID (wsid)
+        # - Default wsid to "__DEFAULT__" (or TEST_WORKSPACE env var) when not provided
+        # - By default, delete recursively to ensure cleanup in tests
         params = {}
+
+        # Determine workspace ID
+        if wsid is None:
+            # Prefer explicit test workspace if set, otherwise default
+            wsid = os.getenv("TEST_WORKSPACE", "__DEFAULT__")
+
         if wsid:
             params["wsid"] = wsid
         if recurse:
